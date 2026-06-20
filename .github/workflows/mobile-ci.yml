@@ -1,0 +1,19 @@
+name: Mobile CI
+on:
+  push:
+    branches: [develop, main, 'release/**', 'hotfix/**']
+  pull_request:
+    branches: [develop, main]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Authenticate GitHub Packages
+        run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npx expo export --platform android --dev false
