@@ -8,12 +8,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: mobile-app
+      - uses: actions/checkout@v4
+        with:
+          repository: Capstone-House-Finder/Student-Housing
+          path: web-platform
       - uses: actions/setup-node@v4
         with: { node-version: '20' }
       - name: Authenticate GitHub Packages
         run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
-      - run: npm update @housing/shared
-      - run: npm ci && npx tsc --noEmit
+      - run: cd mobile-app && npm ci && npx tsc --noEmit
       - uses: peter-evans/create-pull-request@v6
         with:
           commit-message: "chore: update @housing/shared"
