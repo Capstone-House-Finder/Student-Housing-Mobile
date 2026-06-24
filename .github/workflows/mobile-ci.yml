@@ -21,7 +21,7 @@ jobs:
       - name: Authenticate GitHub Packages
         run: |
           echo "@capstone-house-finder:registry=https://npm.pkg.github.com" >> ~/.npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}" >> ~/.npmrc
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npm run lint
