@@ -15,9 +15,7 @@ jobs:
           repository: Capstone-House-Finder/Student-Housing
           path: web-platform
       - uses: actions/setup-node@v4
-        with: { node-version: '20' }
-      - name: Authenticate GitHub Packages
-        run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}" > ~/.npmrc
+        with: { node-version: '22' }
       - run: npm update @capstone-house-finder/shf-api
       - run: npm ci && npx tsc --noEmit
       - uses: peter-evans/create-pull-request@v6
