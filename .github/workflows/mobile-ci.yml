@@ -18,11 +18,10 @@ jobs:
         with:
           node-version: '22'
           registry-url: 'https://npm.pkg.github.com'
-      - name: Authenticate GitHub Packages
-        run: |
-          echo "@capstone-house-finder:registry=https://npm.pkg.github.com" >> ~/.npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
+          scope: '@capstone-house-finder'
       - run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
       - run: npx tsc --noEmit
       - run: npm run lint
       - run: npx expo export --platform android --dev false
