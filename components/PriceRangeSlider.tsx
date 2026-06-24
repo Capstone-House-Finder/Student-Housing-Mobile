@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View, PanResponder } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 
@@ -20,65 +20,82 @@ export function PriceRangeSlider({ minValue, maxValue, onChange }: PriceRangeSli
 
   const getPercent = useCallback((val: number) => (val - MIN) / (MAX - MIN), []);
 
-  const panResponder = useMemo(
-    () =>
+  const handlersRef = useRef<any>(null);
+  useEffect(() => {
+    handlersRef.current = {
+      onGrant: (evt: any) => {
+        if (!trackWidth) return;
+        const { locationX } = evt.nativeEvent;
+
+        // Determine which thumb is closer to the touch
+        const minPos = getPercent(minValue) * trackWidth;
+        const maxPos = getPercent(maxValue) * trackWidth;
+
+        const distToMin = Math.abs(locationX - minPos);
+        const distToMax = Math.abs(locationX - maxPos);
+
+        const active = distToMin < distToMax ? 'min' : 'max';
+        activeThumbRef.current = active;
+        startValuesRef.current = { min: minValue, max: maxValue };
+
+        // Handle tap interaction immediately
+        const percentage = Math.max(0, Math.min(1, locationX / trackWidth));
+        const rawVal = MIN + percentage * (MAX - MIN);
+        const roundedVal = Math.round(rawVal / STEP) * STEP;
+
+        if (active === 'min') {
+          const nextMin = Math.max(MIN, Math.min(roundedVal, maxValue - STEP));
+          onChange(nextMin, maxValue);
+          startValuesRef.current.min = nextMin;
+        } else {
+          const nextMax = Math.max(minValue + STEP, Math.min(roundedVal, MAX));
+          onChange(minValue, nextMax);
+          startValuesRef.current.max = nextMax;
+        }
+      },
+      onMove: (evt: any, gestureState: any) => {
+        if (!trackWidth || !activeThumbRef.current) return;
+
+        const deltaX = gestureState.dx;
+        const deltaValue = (deltaX / trackWidth) * (MAX - MIN);
+
+        if (activeThumbRef.current === 'min') {
+          const rawVal = startValuesRef.current.min + deltaValue;
+          const roundedVal = Math.round(rawVal / STEP) * STEP;
+          const nextMin = Math.max(MIN, Math.min(roundedVal, maxValue - STEP));
+          onChange(nextMin, maxValue);
+        } else {
+          const rawVal = startValuesRef.current.max + deltaValue;
+          const roundedVal = Math.round(rawVal / STEP) * STEP;
+          const nextMax = Math.max(minValue + STEP, Math.min(roundedVal, MAX));
+          onChange(minValue, nextMax);
+        }
+      },
+      onRelease: () => {
+        activeThumbRef.current = null;
+      }
+    };
+  });
+
+  const [panResponder, setPanResponder] = useState<any>(null);
+
+  useEffect(() => {
+    setPanResponder(
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
         onPanResponderGrant: (evt, gestureState) => {
-          if (!trackWidth) return;
-          const { locationX } = evt.nativeEvent;
-
-          // Determine which thumb is closer to the touch
-          const minPos = getPercent(minValue) * trackWidth;
-          const maxPos = getPercent(maxValue) * trackWidth;
-
-          const distToMin = Math.abs(locationX - minPos);
-          const distToMax = Math.abs(locationX - maxPos);
-
-          const active = distToMin < distToMax ? 'min' : 'max';
-          activeThumbRef.current = active;
-          startValuesRef.current = { min: minValue, max: maxValue };
-
-          // Handle tap interaction immediately
-          const percentage = Math.max(0, Math.min(1, locationX / trackWidth));
-          const rawVal = MIN + percentage * (MAX - MIN);
-          const roundedVal = Math.round(rawVal / STEP) * STEP;
-
-          if (active === 'min') {
-            const nextMin = Math.max(MIN, Math.min(roundedVal, maxValue - STEP));
-            onChange(nextMin, maxValue);
-            startValuesRef.current.min = nextMin;
-          } else {
-            const nextMax = Math.max(minValue + STEP, Math.min(roundedVal, MAX));
-            onChange(minValue, nextMax);
-            startValuesRef.current.max = nextMax;
-          }
+          handlersRef.current?.onGrant(evt, gestureState);
         },
         onPanResponderMove: (evt, gestureState) => {
-          if (!trackWidth || !activeThumbRef.current) return;
-
-          const deltaX = gestureState.dx;
-          const deltaValue = (deltaX / trackWidth) * (MAX - MIN);
-
-          if (activeThumbRef.current === 'min') {
-            const rawVal = startValuesRef.current.min + deltaValue;
-            const roundedVal = Math.round(rawVal / STEP) * STEP;
-            const nextMin = Math.max(MIN, Math.min(roundedVal, maxValue - STEP));
-            onChange(nextMin, maxValue);
-          } else {
-            const rawVal = startValuesRef.current.max + deltaValue;
-            const roundedVal = Math.round(rawVal / STEP) * STEP;
-            const nextMax = Math.max(minValue + STEP, Math.min(roundedVal, MAX));
-            onChange(minValue, nextMax);
-          }
+          handlersRef.current?.onMove(evt, gestureState);
         },
         onPanResponderRelease: () => {
-          activeThumbRef.current = null;
+          handlersRef.current?.onRelease();
         }
-      }),
-    [trackWidth, minValue, maxValue, onChange, getPercent]
-  );
+      })
+    );
+  }, []);
 
   const minPercent = getPercent(minValue);
   const maxPercent = getPercent(maxValue);
@@ -92,7 +109,7 @@ export function PriceRangeSlider({ minValue, maxValue, onChange }: PriceRangeSli
       <View
         style={styles.sliderWrapper}
         onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}
-        {...panResponder.panHandlers}
+        {...(panResponder?.panHandlers ?? {})}
       >
         {/* Background Track */}
         <View pointerEvents="none" style={[styles.track, { backgroundColor: colors.border }]} />

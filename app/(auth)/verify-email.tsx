@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -38,16 +38,16 @@ export default function VerifyEmailScreen() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Animations
-  const iconScale = useRef(new Animated.Value(0)).current;
-  const cardOpacity = useRef(new Animated.Value(0)).current;
-  const cardTranslateY = useRef(new Animated.Value(24)).current;
+  const iconScale = useMemo(() => new Animated.Value(0), []);
+  const cardOpacity = useMemo(() => new Animated.Value(0), []);
+  const cardTranslateY = useMemo(() => new Animated.Value(24), []);
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(cardOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
       Animated.spring(cardTranslateY, { toValue: 0, tension: 60, friction: 10, useNativeDriver: true }),
     ]).start();
-  }, []);
+  }, [cardOpacity, cardTranslateY]);
 
   useEffect(() => {
     if (!paramToken) return;
@@ -79,7 +79,7 @@ export default function VerifyEmailScreen() {
       setStatus('error');
       setErrorMsg('A network error occurred. Please check your connection.');
     });
-  }, [paramToken]);
+  }, [paramToken, iconScale, refreshUser]);
 
   const startCountdown = () => {
     setCountdown(RESEND_COOLDOWN);

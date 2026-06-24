@@ -1,7 +1,7 @@
 import { useLocalSearchParams, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View, Image, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as ImagePicker from 'expo-image-picker';
 import { listingSchema, type ListingFormData, listingsApi, type Listing } from '@/lib/api-config';
@@ -23,12 +23,12 @@ export default function EditListingScreen() {
 
   const [listing, setListing] = useState<Listing | null>(null);
   const [loadingListing, setLoadingListing] = useState(true);
-  const [existingPhotos, setExistingPhotos] = useState<Array<{url:string, public_id?:string}>>([]);
+  const [existingPhotos, setExistingPhotos] = useState<{url:string, public_id?:string}[]>([]);
   const [newPhotos, setNewPhotos] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const { control, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<ListingFormData>({
+  const { control, handleSubmit, setValue, reset, formState: { errors } } = useForm<ListingFormData>({
     resolver: zodResolver(listingSchema),
     defaultValues: {
       title: '',
@@ -149,7 +149,7 @@ export default function EditListingScreen() {
     );
   };
 
-  const selectedType = watch('property_type');
+  const selectedType = useWatch({ control, name: 'property_type' });
 
   if (loadingListing) {
     return (

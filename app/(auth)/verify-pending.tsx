@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -29,10 +29,10 @@ export default function VerifyPendingScreen() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Entrance animations
-  const cardOpacity = useRef(new Animated.Value(0)).current;
-  const cardTranslateY = useRef(new Animated.Value(28)).current;
-  const envelopeScale = useRef(new Animated.Value(0)).current;
-  const envelopeRotate = useRef(new Animated.Value(0)).current;
+  const cardOpacity = useMemo(() => new Animated.Value(0), []);
+  const cardTranslateY = useMemo(() => new Animated.Value(28), []);
+  const envelopeScale = useMemo(() => new Animated.Value(0), []);
+  const envelopeRotate = useMemo(() => new Animated.Value(0), []);
 
   useEffect(() => {
     Animated.parallel([
@@ -51,12 +51,14 @@ export default function VerifyPendingScreen() {
         ])
       ).start();
     });
-  }, []);
+  }, [cardOpacity, cardTranslateY, envelopeScale, envelopeRotate]);
 
-  const envelopeRotateDeg = envelopeRotate.interpolate({
-    inputRange: [-1, 1],
-    outputRange: ['-8deg', '8deg'],
-  });
+  const envelopeRotateDeg = useMemo(() => {
+    return envelopeRotate.interpolate({
+      inputRange: [-1, 1],
+      outputRange: ['-8deg', '8deg'],
+    });
+  }, [envelopeRotate]);
 
   const startCountdown = () => {
     setCountdown(RESEND_COOLDOWN);
@@ -134,7 +136,7 @@ export default function VerifyPendingScreen() {
           </View>
 
           <View style={s.divider} />
-          <Text style={s.sectionLabel}>Didn't receive it?</Text>
+          <Text style={s.sectionLabel}>{"Didn't receive it?"}</Text>
 
           <TextInput
             style={s.input}
