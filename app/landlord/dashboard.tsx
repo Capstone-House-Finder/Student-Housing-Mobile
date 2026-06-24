@@ -31,7 +31,7 @@ import { listingsApi, rentalsApi, getValidAccessToken, type Listing } from '@/li
 
 interface StudentDashboardData {
   stats?: { total_reviews?: number; contact_requests?: number };
-  reviews?: Array<{ id: number; listing_title?: string; rating?: number; comment?: string; created_at?: string }>;
+  reviews?: { id: number; listing_title?: string; rating?: number; comment?: string; created_at?: string }[];
 }
 
 const STATUS_GROUPS = [
@@ -52,12 +52,11 @@ export default function DashboardScreen() {
   const [myListings, setMyListings] = useState<Listing[]>([]);
   const [landlordStats, setLandlordStats] = useState<Record<string, number>>({});
   const [studentData, setStudentData] = useState<StudentDashboardData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [statusModalVisible, setStatusModalVisible] = useState(false);
   const [rentalModalVisible, setRentalModalVisible] = useState(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [creatingRental, setCreatingRental] = useState(false);
 
   const fetchLandlordData = useCallback(async () => {
@@ -78,20 +77,23 @@ export default function DashboardScreen() {
     }
   }, [accessToken]);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    if (role === 'landlord') await fetchLandlordData();
-    else await fetchStudentData();
-    setLoading(false);
-  }, [role, fetchLandlordData, fetchStudentData]);
-
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    let active = true;
+    const load = async () => {
+      if (role === 'landlord') await fetchLandlordData();
+      else await fetchStudentData();
+      if (active) setLoading(false);
+    };
+    load();
+    return () => {
+      active = false;
+    };
+  }, [role, fetchLandlordData, fetchStudentData]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadData();
+    if (role === 'landlord') await fetchLandlordData();
+    else await fetchStudentData();
     setRefreshing(false);
   };
 
@@ -107,7 +109,6 @@ export default function DashboardScreen() {
 
   const handleStatusSelect = async (status: string) => {
     if (!selectedListing || !accessToken) return;
-    setSelectedStatus(status);
     setStatusModalVisible(false);
 
     if (status === 'rented') {
@@ -197,7 +198,7 @@ export default function DashboardScreen() {
   const totalContacts = landlordStats.total_contacts ?? 0;
 
   const studentActivity = useMemo(() => {
-    const items: Array<{ id: string; type: string; label: string; date?: string }> = [];
+    const items: { id: string; type: string; label: string; date?: string }[] = [];
     studentData?.reviews?.forEach((r) => {
       items.push({
         id: `review-${r.id}`,

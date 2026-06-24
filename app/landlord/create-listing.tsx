@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Alert, StyleSheet, Text, View, ScrollView, Image, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as ImagePicker from 'expo-image-picker';
 import PagerView from 'react-native-pager-view';
@@ -13,9 +13,6 @@ import { Card } from '@/components/ui/Card';
 import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { uploadMultipleImages } from '@/services/cloudinary';
-import { useOfflineSync } from '@/hooks/useOfflineSync';
-import { enqueueMutation } from '@/lib/offline-queue';
-import Toast from 'react-native-toast-message';
 
 const AMENITIES_LIST = ['Wifi', 'Water', 'Electricity', 'Furnished', 'Air Conditioning', 'Security', 'Laundry'];
 const PROPERTY_TYPES = ['apartment', 'studio', 'room', 'house', 'condo', 'townhouse'];
@@ -26,14 +23,13 @@ export default function CreateListingScreen() {
   const { accessToken } = useAuth();
   const { colors } = useTheme();
   const queryClient = useQueryClient();
-  const { isOffline } = useOfflineSync();
   const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const pagerRef = useRef<any>(null);
 
-  const { control, handleSubmit, trigger, getValues, setValue, watch, formState: { errors } } = useForm<ListingFormData>({
+  const { control, handleSubmit, trigger, getValues, setValue, formState: { errors } } = useForm<ListingFormData>({
     resolver: zodResolver(listingSchema),
     defaultValues: {
       title: '',
@@ -134,14 +130,12 @@ const onSubmit = async (data: ListingFormData) => {
     // Extract the new listing ID with proper type casting
     const listing = createResponse.data as Listing;
     const listingId = listing.id?.toString();
-    let photoUrls: { url: string; public_id: string }[] = [];
 
     // If there are photos, upload them using the newly created listing ID
     if (selectedPhotos.length > 0 && listingId) {
       setUploadingPhotos(true);
-      const uploadResults = await uploadMultipleImages(selectedPhotos, listingId, accessToken);
+      await uploadMultipleImages(selectedPhotos, listingId, accessToken);
       setUploadingPhotos(false);
-      photoUrls = uploadResults.map(r => ({ url: r.url, public_id: r.public_id }));
     }
 
     // Optionally, you could update the listing with the photo URLs here if the backend supports it.
@@ -158,7 +152,7 @@ const onSubmit = async (data: ListingFormData) => {
   }
 };
 
-  const selectedType = watch('property_type');
+  const selectedType = useWatch({ control, name: 'property_type' });
 
   return (
     <KeyboardAvoidingView
