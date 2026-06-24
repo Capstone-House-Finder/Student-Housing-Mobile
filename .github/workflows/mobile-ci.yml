@@ -16,9 +16,7 @@ jobs:
           repository: Capstone-House-Finder/Student-Housing
           path: web-platform
       - uses: actions/setup-node@v4
-        with: { node-version: '20' }
-      - name: Authenticate GitHub Packages
-        run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}" > ~/.npmrc
+        with: { node-version: '22' }
       - run: cd mobile-app && npm ci
       - run: cd mobile-app && npx tsc --noEmit
       - run: cd mobile-app && npm run lint
