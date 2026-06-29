@@ -63,7 +63,8 @@ export default {
       'expo-sharing',
       ['expo-notifications', { sounds: ['notification.wav'] }],
       ['expo-image-picker', { photosPermission: 'Allow Student Housing to access your photos.' }],
-      ['expo-local-authentication', { faceIDPermission: 'Use Face ID to sign in.' }]
+      ['expo-local-authentication', { faceIDPermission: 'Use Face ID to sign in.' }],
+      '@react-native-community/datetimepicker'
     ]
   }
 };

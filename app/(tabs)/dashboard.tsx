@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -15,6 +15,7 @@ import {
   Platform
 } from 'react-native';
 import { router } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import GorhomBottomSheet from '@gorhom/bottom-sheet';
 import { Button } from '@/components/ui/Button';
@@ -32,6 +33,20 @@ import { listingsApi, rentalsApi, getValidAccessToken, type Listing } from '@/li
 interface StudentDashboardData {
   stats?: { total_reviews?: number; contact_requests?: number };
   reviews?: { id: number; listing_title?: string; rating?: number; comment?: string; created_at?: string }[];
+}
+
+interface StudentRental {
+  id: number;
+  listing_id: number;
+  listing_title?: string;
+  location?: string;
+  start_date?: string;
+  end_date?: string;
+  created_at?: string;
+  price?: number;
+  landlord_email?: string;
+  landlord_name?: string;
+  landlord_phone?: string;
 }
 
 const STATUS_GROUPS = [
@@ -52,6 +67,8 @@ export default function DashboardScreen() {
   const [myListings, setMyListings] = useState<Listing[]>([]);
   const [landlordStats, setLandlordStats] = useState<Record<string, number>>({});
   const [studentData, setStudentData] = useState<StudentDashboardData | null>(null);
+  const [studentRentals, setStudentRentals] = useState<StudentRental[]>([]);
+  const [landlordRentals, setLandlordRentals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [statusModalVisible, setStatusModalVisible] = useState(false);
@@ -69,31 +86,61 @@ export default function DashboardScreen() {
     }
   }, [accessToken]);
 
-  const fetchStudentData = useCallback(async () => {
+  const fetchLandlordRentals = useCallback(async () => {
     if (!accessToken) return;
-    const response = await listingsApi.getStudentDashboard(accessToken);
+    const response = await rentalsApi.getLandlordRentals(accessToken);
     if (response.success) {
-      setStudentData(response.data as StudentDashboardData);
+      setLandlordRentals(response.data as any[] ?? []);
     }
   }, [accessToken]);
 
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      if (role === 'landlord') await fetchLandlordData();
-      else await fetchStudentData();
-      if (active) setLoading(false);
-    };
-    load();
-    return () => {
-      active = false;
-    };
-  }, [role, fetchLandlordData, fetchStudentData]);
+  const fetchStudentData = useCallback(async () => {
+    if (!accessToken) return;
+    console.log('[Student Dashboard] Fetching student data...');
+    const [dashRes, rentalsRes] = await Promise.all([
+      listingsApi.getStudentDashboard(accessToken),
+      rentalsApi.getStudentRentals(accessToken)
+    ]);
+    console.log('[Student Dashboard] Dashboard response:', dashRes);
+    console.log('[Student Dashboard] Rentals response:', rentalsRes);
+    if (dashRes.success) {
+      setStudentData(dashRes.data as StudentDashboardData);
+      console.log('[Student Dashboard] Student data set:', dashRes.data);
+    }
+    if (rentalsRes.success) {
+      const rentals = (rentalsRes.data as StudentRental[]) ?? [];
+      setStudentRentals(rentals);
+      console.log('[Student Dashboard] Student rentals set:', rentals);
+    } else {
+      console.log('[Student Dashboard] Rentals API failed:', rentalsRes.error);
+    }
+  }, [accessToken]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      const load = async () => {
+        if (role === 'landlord') {
+          await fetchLandlordData();
+          await fetchLandlordRentals();
+        } else {
+          await fetchStudentData();
+        }
+        if (active) setLoading(false);
+      };
+      load();
+      return () => { active = false; };
+    }, [role, fetchLandlordData, fetchStudentData, fetchLandlordRentals])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    if (role === 'landlord') await fetchLandlordData();
-    else await fetchStudentData();
+    if (role === 'landlord') {
+      await fetchLandlordData();
+      await fetchLandlordRentals();
+    } else {
+      await fetchStudentData();
+    }
     setRefreshing(false);
   };
 
@@ -129,6 +176,7 @@ export default function DashboardScreen() {
       const token = await getValidAccessToken(accessToken);
       if (!token) {
         setCreatingRental(false);
+        Alert.alert('Error', 'Authentication failed. Please log in again.');
         return;
       }
 
@@ -141,11 +189,16 @@ export default function DashboardScreen() {
 
       if (response.success) {
         await fetchLandlordData();
+        await fetchLandlordRentals();
         queryClient.invalidateQueries({ queryKey: ['listings'] });
         setRentalModalVisible(false);
+        Alert.alert('Success', 'Rental record created successfully!');
+      } else {
+        Alert.alert('Error', response.error?.message || 'Failed to create rental record');
       }
     } catch (error) {
       console.error('Failed to create rental:', error);
+      Alert.alert('Error', 'An unexpected error occurred while creating the rental record');
     } finally {
       setCreatingRental(false);
     }
@@ -253,6 +306,7 @@ export default function DashboardScreen() {
                   <Text style={[styles.listingTitle, { color: colors.text }]} numberOfLines={2}>{item.title}</Text>
                   <Text style={[styles.listingPrice, { color: colors.subtext }]}>{item.price ? item.price.toLocaleString() : '0'} FCFA/mo</Text>
                   <Text style={[styles.listingLocation, { color: colors.subtext }]} numberOfLines={1}>{item.location || ''}</Text>
+                  <Text style={[styles.listingLocation, { color: colors.subtext }]}>👥 {(item as any).interested_students ?? 0} interested</Text>
                 </Pressable>
                 <View style={styles.listingActions}>
                   <View style={styles.badgeContainer}>
@@ -266,15 +320,49 @@ export default function DashboardScreen() {
       ) : (
         <Text style={{ color: colors.subtext, fontStyle: 'italic' }}>No listings created yet.</Text>
       )}
+
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>Rental Records</Text>
+      {landlordRentals.length > 0 ? (
+        landlordRentals.map((rental) => (
+          <View key={rental.id} style={[styles.activityItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.activityType, { color: colors.subtext }]}>RENTAL</Text>
+            <Text style={{ color: colors.text, fontWeight: '700' }}>{rental.listing_title}</Text>
+            <Text style={{ color: colors.subtext, fontSize: 12 }}>Student: {rental.student_name || rental.student_email}</Text>
+            <Text style={{ color: colors.subtext, fontSize: 12 }}>
+              {rental.start_date ? `From: ${new Date(rental.start_date).toLocaleDateString()}` : ''}
+              {rental.end_date ? `  To: ${new Date(rental.end_date).toLocaleDateString()}` : ''}
+            </Text>
+          </View>
+        ))
+      ) : (
+        <Text style={{ color: colors.subtext, fontStyle: 'italic' }}>No rental records yet.</Text>
+      )}
     </View>
   );
+
+  const activeRentals = studentRentals.filter(r => {
+    if (!r.end_date) return true;
+    const endDate = new Date(r.end_date);
+    return endDate >= new Date();
+  });
+  const pastRentals = studentRentals.filter(r => {
+    if (!r.end_date) return false;
+    const endDate = new Date(r.end_date);
+    return endDate < new Date();
+  });
+
+  console.log('[Student Dashboard] Total rentals:', studentRentals.length);
+  console.log('[Student Dashboard] Active rentals:', activeRentals.length);
+  console.log('[Student Dashboard] Past rentals:', pastRentals.length);
+  console.log('[Student Dashboard] Active rentals data:', activeRentals);
+  console.log('[Student Dashboard] Past rentals data:', pastRentals);
 
   const renderStudentDashboard = () => (
     <View style={styles.dashboardContainer}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statsScroll}>
         <StatCard label="Reviews Written" value={studentData?.stats?.total_reviews ?? 0} index={0} />
         <StatCard label="Contacts Made" value={studentData?.stats?.contact_requests ?? 0} index={1} />
-        <StatCard label="Saved" value={0} index={2} />
+        <StatCard label="Active Rentals" value={activeRentals.length} index={2} />
       </ScrollView>
 
       <View style={styles.quickActions}>
@@ -282,6 +370,40 @@ export default function DashboardScreen() {
         <Button title="Edit Profile" variant="secondary" onPress={() => router.push('/(tabs)/profile')} style={styles.quickBtn} />
         <Button title="My Reviews" variant="secondary" onPress={() => router.push('/reviews' as const)} style={styles.quickBtn} />
       </View>
+
+      {activeRentals.length > 0 && (
+        <>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Active Rentals</Text>
+          {activeRentals.map(r => (
+            <Pressable key={r.id} onPress={() => router.push(`/listing/${r.listing_id}`)} style={[styles.activityItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.activityType, { color: colors.subtext }]}>ACTIVE</Text>
+              <Text style={{ color: colors.text, fontWeight: '700' }}>{r.listing_title ?? 'Rental'}</Text>
+              {r.location ? <Text style={{ color: colors.subtext, fontSize: 12 }}>📍 {r.location}</Text> : null}
+              <Text style={{ color: colors.subtext, fontSize: 12 }}>
+                {r.start_date ? `From: ${new Date(r.start_date).toLocaleDateString()}` : ''}
+                {r.end_date ? `  To: ${new Date(r.end_date).toLocaleDateString()}` : ''}
+              </Text>
+            </Pressable>
+          ))}
+        </>
+      )}
+
+      {pastRentals.length > 0 && (
+        <>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Past Rentals</Text>
+          {pastRentals.map(r => (
+            <Pressable key={r.id} onPress={() => router.push(`/listing/${r.listing_id}`)} style={[styles.activityItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.activityType, { color: colors.subtext }]}>PAST</Text>
+              <Text style={{ color: colors.text, fontWeight: '700' }}>{r.listing_title ?? 'Rental'}</Text>
+              {r.location ? <Text style={{ color: colors.subtext, fontSize: 12 }}>📍 {r.location}</Text> : null}
+              <Text style={{ color: colors.subtext, fontSize: 12 }}>
+                {r.start_date ? `From: ${new Date(r.start_date).toLocaleDateString()}` : ''}
+                {r.end_date ? `  To: ${new Date(r.end_date).toLocaleDateString()}` : ''}
+              </Text>
+            </Pressable>
+          ))}
+        </>
+      )}
 
       <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Activity</Text>
       {studentActivity.length > 0 ? (
@@ -291,9 +413,9 @@ export default function DashboardScreen() {
             <Text style={{ color: colors.text }}>{item.label}</Text>
           </View>
         ))
-      ) : (
+      ) : studentRentals.length === 0 ? (
         <EmptyState title="No activity yet" message="Browse listings, leave reviews, or contact landlords to see your activity here." />
-      )}
+      ) : null}
     </View>
   );
 

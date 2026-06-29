@@ -52,6 +52,7 @@ export default function DashboardScreen() {
   const [myListings, setMyListings] = useState<Listing[]>([]);
   const [landlordStats, setLandlordStats] = useState<Record<string, number>>({});
   const [studentData, setStudentData] = useState<StudentDashboardData | null>(null);
+  const [landlordRentals, setLandlordRentals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [statusModalVisible, setStatusModalVisible] = useState(false);
@@ -69,6 +70,14 @@ export default function DashboardScreen() {
     }
   }, [accessToken]);
 
+  const fetchLandlordRentals = useCallback(async () => {
+    if (!accessToken) return;
+    const response = await rentalsApi.getLandlordRentals(accessToken);
+    if (response.success) {
+      setLandlordRentals(response.data as any[] ?? []);
+    }
+  }, [accessToken]);
+
   const fetchStudentData = useCallback(async () => {
     if (!accessToken) return;
     const response = await listingsApi.getStudentDashboard(accessToken);
@@ -80,20 +89,28 @@ export default function DashboardScreen() {
   useEffect(() => {
     let active = true;
     const load = async () => {
-      if (role === 'landlord') await fetchLandlordData();
-      else await fetchStudentData();
+      if (role === 'landlord') {
+        await fetchLandlordData();
+        await fetchLandlordRentals();
+      } else {
+        await fetchStudentData();
+      }
       if (active) setLoading(false);
     };
     load();
     return () => {
       active = false;
     };
-  }, [role, fetchLandlordData, fetchStudentData]);
+  }, [role, fetchLandlordData, fetchStudentData, fetchLandlordRentals]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    if (role === 'landlord') await fetchLandlordData();
-    else await fetchStudentData();
+    if (role === 'landlord') {
+      await fetchLandlordData();
+      await fetchLandlordRentals();
+    } else {
+      await fetchStudentData();
+    }
     setRefreshing(false);
   };
 
@@ -129,6 +146,7 @@ export default function DashboardScreen() {
       const token = await getValidAccessToken(accessToken);
       if (!token) {
         setCreatingRental(false);
+        Alert.alert('Error', 'Authentication failed. Please log in again.');
         return;
       }
 
@@ -141,11 +159,16 @@ export default function DashboardScreen() {
 
       if (response.success) {
         await fetchLandlordData();
+        await fetchLandlordRentals();
         queryClient.invalidateQueries({ queryKey: ['listings'] });
         setRentalModalVisible(false);
+        Alert.alert('Success', 'Rental record created successfully!');
+      } else {
+        Alert.alert('Error', response.error?.message || 'Failed to create rental record');
       }
     } catch (error) {
       console.error('Failed to create rental:', error);
+      Alert.alert('Error', 'An unexpected error occurred while creating the rental record');
     } finally {
       setCreatingRental(false);
     }
@@ -257,6 +280,11 @@ export default function DashboardScreen() {
                 <View style={styles.listingActions}>
                   <View style={styles.badgeContainer}>
                     <Badge status={item.status ?? 'available'} />
+                    {item.verified === false && (
+                      <Text style={{ color: '#9a6500', fontSize: 11, fontWeight: '700', marginTop: 2 }}>
+                        Pending Approval
+                      </Text>
+                    )}
                   </View>
                 </View>
               </View>
@@ -265,6 +293,23 @@ export default function DashboardScreen() {
         />
       ) : (
         <Text style={{ color: colors.subtext, fontStyle: 'italic' }}>No listings created yet.</Text>
+      )}
+
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>Rental Records</Text>
+      {landlordRentals.length > 0 ? (
+        landlordRentals.map((rental) => (
+          <View key={rental.id} style={[styles.activityItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.activityType, { color: colors.subtext }]}>RENTAL</Text>
+            <Text style={{ color: colors.text, fontWeight: '700' }}>{rental.listing_title}</Text>
+            <Text style={{ color: colors.subtext, fontSize: 12 }}>Student: {rental.student_name || rental.student_email}</Text>
+            <Text style={{ color: colors.subtext, fontSize: 12 }}>
+              {rental.start_date ? `From: ${new Date(rental.start_date).toLocaleDateString()}` : ''}
+              {rental.end_date ? `  To: ${new Date(rental.end_date).toLocaleDateString()}` : ''}
+            </Text>
+          </View>
+        ))
+      ) : (
+        <Text style={{ color: colors.subtext, fontStyle: 'italic' }}>No rental records yet.</Text>
       )}
     </View>
   );
