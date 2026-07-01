@@ -3,7 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
-    "@capstone-house-finder/shf-api": "file:../web-platform/packages/shared",
+    "@capstone-house-finder/shf-api": "^1.1.1",
     "@gorhom/bottom-sheet": "^5.2.14",
     "@hookform/resolvers": "^3.3.4",
     "@react-native-async-storage/async-storage": "2.2.0",
