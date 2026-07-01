@@ -1,20 +1,38 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Listing } from '@/lib/api-config';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
 export function PropertyCard({ listing }: { listing: Listing }) {
   const { colors } = useTheme();
+  const { isAuthenticated } = useAuth();
   const imageUrl = listing.photos?.[0]?.url ?? 'https://placehold.co/600x400?text=Student+Housing';
   const bedrooms = listing.bedrooms ?? 0;
   const rating = (listing as any).rating ?? 0;
 
+  const handlePress = () => {
+    if (!isAuthenticated) {
+      Alert.alert(
+        'Sign in required',
+        'Please register or log in to view listing details.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Log In', onPress: () => router.push('/(auth)/login') },
+          { text: 'Register', onPress: () => router.push('/(auth)/register') }
+        ]
+      );
+      return;
+    }
+    router.push(`/listing/${listing.id}`);
+  };
+
   return (
     <Animated.View entering={FadeInUp.duration(400)}>
-      <Pressable onPress={() => router.push(`/listing/${listing.id}`)}>
+      <Pressable onPress={handlePress}>
         <Card style={styles.card}>
           <Image source={{ uri: imageUrl }} style={styles.image} />
           <View style={styles.body}>

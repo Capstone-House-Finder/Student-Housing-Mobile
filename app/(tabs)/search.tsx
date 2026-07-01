@@ -1,5 +1,5 @@
 import { useRef, useState, useMemo } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
 import GorhomBottomSheet from '@gorhom/bottom-sheet';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorAlert } from '@/components/ErrorAlert';
@@ -24,7 +24,8 @@ export default function SearchScreen() {
     minPrice: '',
     maxPrice: '',
     propertyTypes: [],
-    bedrooms: 'any'
+    bedrooms: 'any',
+    amenities: []
   });
   
   const [results, setResults] = useState<Listing[]>([]);
@@ -45,6 +46,7 @@ export default function SearchScreen() {
     if (filters.maxPrice) count++;
     if (filters.propertyTypes.length > 0) count++;
     if (filters.bedrooms !== 'any') count++;
+    if (filters.amenities && filters.amenities.length > 0) count++;
     return count;
   }, [filters]);
 
@@ -85,6 +87,7 @@ export default function SearchScreen() {
     if (filters.bedrooms !== 'any') {
       params.bedrooms = filters.bedrooms === '4+' ? 4 : Number(filters.bedrooms);
     }
+    if (filters.amenities && filters.amenities.length > 0) params.amenities = filters.amenities.join(',');
 
     const response = await listingsApi.search(accessToken, params);
 
@@ -109,6 +112,7 @@ export default function SearchScreen() {
   };
 
   const handleSearch = () => {
+    Keyboard.dismiss();
     fetchResults(1);
   };
 
@@ -168,7 +172,7 @@ export default function SearchScreen() {
         }
         ListEmptyComponent={
           hasSearched && !isSearching
-            ? <EmptyState title="No matching homes found" />
+            ? <EmptyState title="No results found" />
             : <EmptyState title="Enter your search details" message="Results will load after you press Search." />
         }
         renderItem={({ item }) => <PropertyCard listing={item} />}

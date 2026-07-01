@@ -28,7 +28,7 @@ export default function RegisterScreen() {
     })();
   }, []);
 
-  const { control, handleSubmit, trigger, formState: { errors } } = useForm<RegisterFormData>({
+  const { control, handleSubmit, trigger, setError, formState: { errors } } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       full_name: '',
@@ -85,7 +85,16 @@ export default function RegisterScreen() {
       }
     } else {
       hapticError();
-      Alert.alert('Registration failed', result.error);
+      const errMsg = result.error ?? 'Registration failed';
+      const isDuplicateEmail =
+        errMsg.toLowerCase().includes('email') &&
+        (errMsg.toLowerCase().includes('already') || errMsg.toLowerCase().includes('exists') || errMsg.toLowerCase().includes('duplicate'));
+      if (isDuplicateEmail) {
+        setStep(2);
+        setError('email', { message: errMsg });
+      } else {
+        Alert.alert('Registration failed', errMsg);
+      }
     }
   };
 

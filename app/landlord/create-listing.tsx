@@ -252,7 +252,12 @@ const onSubmit = async (data: ListingFormData) => {
               </ScrollView>
             </View>
 
-            <Button title="Next: Features →" onPress={handleNext} style={styles.btn} />
+            <Button
+              title="Next"
+              onPress={handleNext}
+              style={styles.btn}
+              rightIcon={<Text style={styles.btnIcon}>›</Text>}
+            />
           </View>
 
           {/* Step 2: Features */}
@@ -314,8 +319,8 @@ const onSubmit = async (data: ListingFormData) => {
             />
 
             <View style={styles.btnRow}>
-              <Button title="← Back" variant="secondary" onPress={handleBack} style={styles.halfBtn} />
-              <Button title="Next: Photos →" onPress={handleNext} style={styles.halfBtn} />
+              <Button title="Back" variant="secondary" onPress={handleBack} style={styles.halfBtn} leftIcon={<Text style={styles.btnIcon}>‹</Text>} />
+              <Button title="Next" onPress={handleNext} style={styles.halfBtn} rightIcon={<Text style={styles.btnIcon}>›</Text>} />
             </View>
           </View>
 
@@ -353,8 +358,8 @@ const onSubmit = async (data: ListingFormData) => {
             )}
 
             <View style={styles.btnRow}>
-              <Button title="← Back" variant="secondary" onPress={handleBack} style={styles.halfBtn} />
-              <Button title="Review →" onPress={handleNext} style={styles.halfBtn} />
+              <Button title="Back" variant="secondary" onPress={handleBack} style={styles.halfBtn} leftIcon={<Text style={styles.btnIcon}>‹</Text>} />
+              <Button title="Review" onPress={handleNext} style={styles.halfBtn} rightIcon={<Text style={styles.btnIcon}>›</Text>} />
             </View>
           </View>
 
@@ -390,12 +395,13 @@ const onSubmit = async (data: ListingFormData) => {
             )}
 
             <View style={styles.btnRow}>
-              <Button title="← Back" variant="secondary" onPress={handleBack} style={styles.halfBtn} />
+              <Button title="Back" variant="secondary" onPress={handleBack} style={styles.halfBtn} leftIcon={<Text style={styles.btnIcon}>‹</Text>} />
               <Button
-                title="🚀 Publish"
+                title="Publish"
                 loading={submitting}
                 onPress={handleSubmit(onSubmit)}
                 style={styles.halfBtn}
+                rightIcon={!submitting ? <Text style={styles.btnIcon}>🚀</Text> : undefined}
               />
             </View>
           </View>
@@ -447,5 +453,6 @@ const styles = StyleSheet.create({
   reviewTitle: { fontSize: 18, fontWeight: '800' },
   reviewPrice: { fontSize: 20, fontWeight: '900', marginTop: 4 },
   reviewMeta: { flexDirection: 'row', gap: 14, marginTop: 8 },
-  loadingBox: { alignItems: 'center', paddingVertical: 12 }
+  loadingBox: { alignItems: 'center', paddingVertical: 12 },
+  btnIcon: { color: '#fff', fontSize: 20, fontWeight: '700', lineHeight: 22 }
 });

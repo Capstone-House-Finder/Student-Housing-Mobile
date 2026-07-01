@@ -10,6 +10,7 @@ export interface FilterValues {
   maxPrice: string;
   propertyTypes: string[];
   bedrooms: string;
+  amenities: string[];
 }
 
 interface FilterSheetProps {
@@ -19,6 +20,7 @@ interface FilterSheetProps {
 
 const PROPERTY_TYPES = ['apartment', 'studio', 'room', 'house'];
 const BEDROOM_OPTIONS = ['any', '1', '2', '3', '4+'];
+const AMENITIES_LIST = ['WiFi', 'Parking', 'Security', 'Water', 'Electricity', 'Kitchen', 'Laundry', 'Air Conditioning', 'Furnished'];
 
 export function FilterSheet({ initialValues, onApply }: FilterSheetProps) {
   const { colors } = useTheme();
@@ -27,6 +29,7 @@ export function FilterSheet({ initialValues, onApply }: FilterSheetProps) {
   const [maxPrice, setMaxPrice] = useState(initialValues.maxPrice);
   const [propertyTypes, setPropertyTypes] = useState<string[]>(initialValues.propertyTypes);
   const [bedrooms, setBedrooms] = useState(initialValues.bedrooms);
+  const [amenities, setAmenities] = useState<string[]>(initialValues.amenities ?? []);
 
   const handleApply = () => {
     onApply({
@@ -34,7 +37,8 @@ export function FilterSheet({ initialValues, onApply }: FilterSheetProps) {
       minPrice: minPrice,
       maxPrice: maxPrice,
       propertyTypes,
-      bedrooms
+      bedrooms,
+      amenities
     });
   };
 
@@ -44,6 +48,8 @@ export function FilterSheet({ initialValues, onApply }: FilterSheetProps) {
     setMaxPrice('');
     setPropertyTypes([]);
     setBedrooms('any');
+    setAmenities([]);
+    onApply({ location: '', minPrice: '', maxPrice: '', propertyTypes: [], bedrooms: 'any', amenities: [] });
   };
 
   const togglePropertyType = (type: string) => {
@@ -51,6 +57,14 @@ export function FilterSheet({ initialValues, onApply }: FilterSheetProps) {
       setPropertyTypes(propertyTypes.filter(t => t !== type));
     } else {
       setPropertyTypes([...propertyTypes, type]);
+    }
+  };
+
+  const toggleAmenity = (amenity: string) => {
+    if (amenities.includes(amenity)) {
+      setAmenities(amenities.filter(a => a !== amenity));
+    } else {
+      setAmenities([...amenities, amenity]);
     }
   };
 
@@ -151,6 +165,38 @@ export function FilterSheet({ initialValues, onApply }: FilterSheetProps) {
                   ]}
                 >
                   {bed === 'any' ? 'Any' : bed}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Amenities</Text>
+        <View style={styles.chipRow}>
+          {AMENITIES_LIST.map((amenity) => {
+            const isSelected = amenities.includes(amenity);
+            return (
+              <Pressable
+                key={amenity}
+                onPress={() => toggleAmenity(amenity)}
+                style={({ pressed }) => [
+                  styles.chip,
+                  {
+                    backgroundColor: isSelected ? colors.text : colors.surface,
+                    borderColor: colors.border
+                  },
+                  pressed && { opacity: 0.8 }
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    { color: isSelected ? colors.background : colors.text }
+                  ]}
+                >
+                  {amenity}
                 </Text>
               </Pressable>
             );

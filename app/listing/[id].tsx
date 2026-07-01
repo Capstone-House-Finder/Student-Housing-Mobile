@@ -1,5 +1,5 @@
 import { useLocalSearchParams, Stack } from 'expo-router';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -27,7 +27,7 @@ import { ReportModal } from '@/components/ReportModal';
 import { LoadingOverlay } from '@/components/LoadingOverlay';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { useAuth } from '@/contexts/AuthContext';
-import { listingsApi, reviewsApi, getValidAccessToken, type Listing, type Review } from '@/lib/api-config';
+import { listingsApi, reviewsApi, rentalsApi, getValidAccessToken, type Listing, type Review } from '@/lib/api-config';
 import { getListingShareUrl } from '@/lib/deep-linking';
 import { enqueueMutation } from '@/lib/offline-queue';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
@@ -47,10 +47,24 @@ export default function ListingDetailScreen() {
   const [reviewComment, setReviewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
   const [contactLoading, setContactLoading] = useState(false);
+  const [hasConfirmedRental, setHasConfirmedRental] = useState(false);
 
   const reportSheetRef = useRef<GorhomBottomSheet>(null);
 
   const listingId = Number(id);
+
+  // Check if student has a confirmed rental for this listing
+  useEffect(() => {
+    if (!accessToken || user?.role !== 'student') return;
+    rentalsApi.getStudentRentals(accessToken).then((res: any) => {
+      if (res.success && Array.isArray(res.data)) {
+        const found = (res.data as any[]).some(
+          r => r.listing_id === listingId
+        );
+        setHasConfirmedRental(found);
+      }
+    }).catch(() => undefined);
+  }, [accessToken, user?.role, listingId]);
 
   const { data: listing, isLoading } = useQuery({
     queryKey: ['listing', listingId],
@@ -152,6 +166,18 @@ export default function ListingDetailScreen() {
     }
   };
 
+  const handleReplyToReview = async (reviewId: number, text: string) => {
+    const token = await getValidAccessToken(accessToken);
+    if (!token || !listing) return;
+    const response = await reviewsApi.reply(token, reviewId, text);
+    if (response.success) {
+      queryClient.invalidateQueries({ queryKey: ['listing', listingId] });
+      Toast.show({ type: 'success', text1: 'Reply submitted' });
+    } else {
+      Toast.show({ type: 'error', text1: response.error?.message ?? 'Failed to submit reply' });
+    }
+  };
+
   if (isLoading && !listing) return <LoadingOverlay />;
 
   if (!listing) {
@@ -218,7 +244,14 @@ export default function ListingDetailScreen() {
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Reviews & Ratings</Text>
             {visibleReviews.length > 0 ? (
-              visibleReviews.map((review) => <ReviewItem key={review.id} review={review} />)
+              visibleReviews.map((review) => (
+                <ReviewItem
+                  key={review.id}
+                  review={review as Review & { reply?: { text: string } | null }}
+                  isLandlord={isOwnListing}
+                  onReply={isOwnListing ? (text) => handleReplyToReview(review.id, text) : undefined}
+                />
+              ))
             ) : (
               <Text style={{ color: colors.subtext, fontStyle: 'italic', marginTop: 4 }}>No reviews yet for this property.</Text>
             )}
@@ -230,7 +263,7 @@ export default function ListingDetailScreen() {
               />
             )}
 
-            {user?.role === 'student' && (
+            {(!isOwnListing || user?.role === 'student') && (
               <Card style={{ marginTop: 12, padding: 14, gap: 10 }}>
                 <Text style={[styles.descTitle, { color: colors.text }]}>Leave a review</Text>
                 <StarRating rating={reviewRating} onChange={setReviewRating} />

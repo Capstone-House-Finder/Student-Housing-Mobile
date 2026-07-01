@@ -1,6 +1,6 @@
 import '@/global.css';
 import { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -34,7 +34,9 @@ function AppEffects() {
 
 function RootStack() {
   const { colors } = useTheme();
-  const { isLoading } = useAuth();
+  const { isLoading, isAuthenticated } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
 
   useEffect(() => {
     if (!isLoading) {
@@ -42,13 +44,23 @@ function RootStack() {
     }
   }, [isLoading]);
 
+  // Redirect unauthenticated users to login; kick authenticated users out of auth screens
+  useEffect(() => {
+    if (isLoading) return;
+    const inAuthGroup = segments[0] === '(auth)';
+    if (!isAuthenticated && !inAuthGroup) {
+      router.replace('/(auth)/login');
+    } else if (isAuthenticated && inAuthGroup) {
+      router.replace('/');
+    }
+  }, [isLoading, isAuthenticated, segments, router]);
+
   return (
     <>
       <AppEffects />
       <Stack screenOptions={{ headerStyle: { backgroundColor: colors.background }, headerTintColor: colors.text }}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)/verify-email" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)/verify-pending" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="reviews" options={{ title: 'My Reviews' }} />
         <Stack.Screen name="listing/[id]" options={{ title: 'Listing' }} />
