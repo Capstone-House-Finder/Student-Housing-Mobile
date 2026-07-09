@@ -11,6 +11,7 @@ export default {
     version: '1.0.0',
     scheme: 'studenthousing',
     orientation: 'portrait',
+    owner: "watasa05",
     icon: './assets/images/icon.png',
     userInterfaceStyle: 'automatic',
     splash: {
@@ -20,7 +21,11 @@ export default {
     },
     extra: {
       apiUrl: process.env.EXPO_PUBLIC_API_URL ?? process.env.API_BASE_URL ?? null,
-      easProjectId: process.env.EAS_PROJECT_ID,
+      appEnv: process.env.APP_ENV ?? 'development',
+      sentryDsn: process.env.SENTRY_DSN ?? '',
+      eas: {
+        projectId: "8d94224c-f467-437e-a821-d2c30a810b98"
+      },
       cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME ?? null,
       cloudinaryUploadPreset: process.env.CLOUDINARY_UPLOAD_PRESET ?? null,
       cloudinaryApiKey: process.env.CLOUDINARY_API_KEY ?? null,
