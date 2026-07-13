@@ -13,8 +13,8 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
-      - name: Authenticate GitHub Packages  
-      - run: npm ci
+      - name: install dependencies
+        run: npm ci
         env: 
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
       - name: EAS Build (release branches)
