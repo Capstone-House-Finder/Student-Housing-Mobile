@@ -13,10 +13,10 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
-      - name: Authenticate GitHub Packages
-        env: 
-          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}  
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
       - name: EAS Build (release branches)
         if: startsWith(github.ref_name, 'release/')
         run: eas build --platform android --profile preview --non-interactive
@@ -27,4 +27,4 @@ jobs:
           eas submit --platform android --profile production --non-interactive
       - name: EAS OTA Update (hotfix)
         if: startsWith(github.ref_name, 'hotfix/')
-        run: 'eas update --branch production --message "Hotfix: ${{ github.sha }}"'
+        run: eas update --branch production --message "Hotfix: ${{ github.sha }}"

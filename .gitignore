@@ -42,4 +42,4 @@ yarn-error.*
 
 /.vscode
 ISSUE_FILE_MAPPING.md
-.npmrc
+.secrets
