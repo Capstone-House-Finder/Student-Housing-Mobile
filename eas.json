@@ -20,7 +20,7 @@
         "buildType": "apk"
       },
       "env": {
-        "API_BASE_URL": "https://student-housing-backend-three.vercel.app",
+        "API_BASE_URL": "https://student-housing-three.vercel.app",
         "APP_ENV": "preview"
       }
     },
@@ -29,7 +29,7 @@
         "buildType": "apk"
       },
       "env": {
-        "API_BASE_URL": "https://student-housing-backend-three.vercel.app",
+        "API_BASE_URL": "https://student-housing-three.vercel.app",
         "APP_ENV": "production"
       }
     }
